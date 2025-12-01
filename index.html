@@ -108,6 +108,82 @@
     .spinner-ios i:nth-child(10){transform:rotate(270deg) translateY(-24px);animation-delay:-0.2s;}
     .spinner-ios i:nth-child(11){transform:rotate(300deg) translateY(-24px);animation-delay:-0.1s;}
     .spinner-ios i:nth-child(12){transform:rotate(330deg) translateY(-24px);animation-delay:0s;}
+
+    /* Lista vertical de jugadores */
+.list-stack{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin:10px 0 4px;
+}
+
+/* Botón de jugador apilado y ancho completo */
+.player-btn{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  min-height:50px;
+  border-radius:12px;
+  cursor:pointer;
+  background:#fff;
+  color:#0b66ff;
+  font-weight:800;
+  border:2px solid #cbd5e1;
+  user-select:none;
+  transition: transform .06s ease, box-shadow .12s ease, border-color .12s ease;
+  padding:12px 14px;
+}
+.player-btn:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(11,102,255,.12);
+  border-color:#0a58d3;
+}
+
+/* Contenido del botón: nombre del jugador */
+.player-name{
+  flex:1;
+  min-width:0;
+  font-size:16px;
+  color:#0b66ff;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Badge de números a la derecha */
+.player-numbers{
+  flex:none;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:#0b66ff;
+  color:#fff;
+  border:2px solid #0a58d3;
+  border-radius:999px;
+  padding:6px 10px;
+  font-weight:900;
+  font-size:.9rem;
+}
+
+/* Dentro del badge: cantidad + preview */
+.player-count{
+  background:#e9f8ef;
+  color:#16a34a;
+  border:2px solid #16a34a;
+  border-radius:8px;
+  padding:2px 6px;
+  font-weight:900;
+  font-size:.85rem;
+}
+.player-preview{
+  white-space:nowrap;
+  max-width:42vw; /* ajusta si necesitas mostrar más/menos */
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+    
   </style>
 </head>
 <body>
@@ -127,7 +203,7 @@
         <p class="helper"><b>¡Gracias por tu colaboración!</b><br>Selecciona un jugador para ver los números disponibles.</p>
         <img class="brand" alt="Rifa" src="https://res.cloudinary.com/dqqeavica/image/upload/v1764607288/RIFAGP_lsmkvp.png" />
         
-        <div id="jugadores-grid" class="num-grid" aria-live="polite" style="margin-top:12px;"></div>
+        <div id="jugadores-grid" class="list-stack" aria-live="polite" style="margin-top:12px;"></div>
 
         <p class="center muted" style="margin:10px 0 0;">
           Copyright © <a href="https://wa.me/573103230712" target="_blank" rel="noopener"><b>Oscar Polanía</b></a>
@@ -286,42 +362,81 @@
       grid.appendChild(frag);
     }
 
-    function renderJugadores(){
-      const grid = document.getElementById('jugadores-grid');
-      grid.innerHTML = '';
-      const frag = document.createDocumentFragment();
+   function renderJugadores(){
+  const grid = document.getElementById('jugadores-grid');
+  grid.innerHTML = '';
+  const frag = document.createDocumentFragment();
 
-      // Crear un solo botón por jugador con al menos un número DISPONIBLE
-      const set = new Set();
-      for(const name of JUGADORES){
-        if(!name) continue;
-        const key = name.trim();
-        if(set.has(key)) continue;
-        set.add(key);
+  // Mapa: jugador -> lista de EMOJIS DISPONIBLES
+  const dispoPorJugador = new Map();
+  for(const it of DATA){
+    const jugador = String(it.jugador||'').trim();
+    const disp = String(it.estado||'').trim().toUpperCase() === 'DISPONIBLE';
+    if(!jugador) continue;
+    if(!dispoPorJugador.has(jugador)) dispoPorJugador.set(jugador, []);
+    if(disp) dispoPorJugador.get(jugador).push(it.emoji);
+  }
 
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'num-btn'; // Reutilizamos estilo
-        btn.textContent = key;
-        btn.addEventListener('click', async ()=>{
-          playSoundOnce(SOUNDS.back);
-          jugadorSeleccionado = key;
-          document.getElementById('jugador-actual').textContent = key;
+  // Botones verticales: uno por jugador con al menos 1 disponible
+  const jugadoresOrdenados = [...dispoPorJugador.keys()]
+    .filter(name => dispoPorJugador.get(name).length > 0)
+    .sort((a,b)=>a.localeCompare(b,'es'));
 
-          // Filtrar números por jugador y estado DISPONIBLE
-          const items = DATA.filter(it => 
-            String(it.jugador||'').trim().toUpperCase() === key.trim().toUpperCase() &&
-            String(it.estado||'').trim().toUpperCase() === 'DISPONIBLE'
-          );
-          renderNumeros(items);
-          showView('view-seleccion');
-        });
+  for(const name of jugadoresOrdenados){
+    const disponibles = dispoPorJugador.get(name) || [];
+    const count = disponibles.length;
 
-        frag.appendChild(btn);
-      }
+    // Preview: primeros 8 números convertidos a "00"
+    const preview = disponibles.slice(0, 8).map(emojiToLabel).join(', ');
 
-      grid.appendChild(frag);
-    }
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'player-btn';
+    btn.setAttribute('aria-label', `Jugador ${name}, ${count} números disponibles`);
+
+    // Nombre a la izquierda
+    const left = document.createElement('span');
+    left.className = 'player-name';
+    left.textContent = name;
+
+    // Badge a la derecha
+    const right = document.createElement('span');
+    right.className = 'player-numbers';
+
+    const countEl = document.createElement('span');
+    countEl.className = 'player-count';
+    countEl.textContent = `${count}`;
+
+    const prevEl = document.createElement('span');
+    prevEl.className = 'player-preview';
+    prevEl.textContent = preview;
+
+    right.appendChild(countEl);
+    right.appendChild(prevEl);
+
+    btn.appendChild(left);
+    btn.appendChild(right);
+
+    btn.addEventListener('click', ()=>{
+      playSoundOnce(SOUNDS.back);
+      const key = name.trim();
+      jugadorSeleccionado = key;
+      document.getElementById('jugador-actual').textContent = key;
+
+      // Filtrar números por jugador y estado DISPONIBLE
+      const items = DATA.filter(it => 
+        String(it.jugador||'').trim().toUpperCase() === key.trim().toUpperCase() &&
+        String(it.estado||'').trim().toUpperCase() === 'DISPONIBLE'
+      );
+      renderNumeros(items);
+      showView('view-seleccion');
+    });
+
+    frag.appendChild(btn);
+  }
+
+  grid.appendChild(frag);
+}
 
     async function cargarDatos(){
       // Trae todos los números con el nombre del jugador (col C)
