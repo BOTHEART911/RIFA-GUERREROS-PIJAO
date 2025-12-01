@@ -109,7 +109,7 @@
     .spinner-ios i:nth-child(11){transform:rotate(300deg) translateY(-24px);animation-delay:-0.1s;}
     .spinner-ios i:nth-child(12){transform:rotate(330deg) translateY(-24px);animation-delay:0s;}
 
-    /* Lista vertical de jugadores */
+/* Lista vertical de jugadores */
 .list-stack{
   display:flex;
   flex-direction:column;
@@ -117,12 +117,11 @@
   margin:10px 0 4px;
 }
 
-/* Botón de jugador apilado y ancho completo */
+/* Botón de jugador apilado (solo nombre) */
 .player-btn{
   display:flex;
   align-items:center;
-  justify-content:space-between;
-  gap:10px;
+  justify-content:flex-start;
   min-height:50px;
   border-radius:12px;
   cursor:pointer;
@@ -138,50 +137,6 @@
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(11,102,255,.12);
   border-color:#0a58d3;
-}
-
-/* Contenido del botón: nombre del jugador */
-.player-name{
-  flex:1;
-  min-width:0;
-  font-size:16px;
-  color:#0b66ff;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-/* Badge de números a la derecha */
-.player-numbers{
-  flex:none;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  background:#0b66ff;
-  color:#fff;
-  border:2px solid #0a58d3;
-  border-radius:999px;
-  padding:6px 10px;
-  font-weight:900;
-  font-size:.9rem;
-}
-
-/* Dentro del badge: cantidad + preview */
-.player-count{
-  background:#e9f8ef;
-  color:#16a34a;
-  border:2px solid #16a34a;
-  border-radius:8px;
-  padding:2px 6px;
-  font-weight:900;
-  font-size:.85rem;
-}
-.player-preview{
-  white-space:nowrap;
-  max-width:42vw; /* ajusta si necesitas mostrar más/menos */
-  overflow:hidden;
-  text-overflow:ellipsis;
-  font-variant-numeric: tabular-nums;
 }
     
   </style>
@@ -367,55 +322,26 @@
   grid.innerHTML = '';
   const frag = document.createDocumentFragment();
 
-  // Mapa: jugador -> lista de EMOJIS DISPONIBLES
+  // Mapear jugadores con al menos 1 número DISPONIBLE
   const dispoPorJugador = new Map();
   for(const it of DATA){
     const jugador = String(it.jugador||'').trim();
     const disp = String(it.estado||'').trim().toUpperCase() === 'DISPONIBLE';
     if(!jugador) continue;
-    if(!dispoPorJugador.has(jugador)) dispoPorJugador.set(jugador, []);
-    if(disp) dispoPorJugador.get(jugador).push(it.emoji);
+    if(!dispoPorJugador.has(jugador)) dispoPorJugador.set(jugador, false);
+    if(disp) dispoPorJugador.set(jugador, true);
   }
 
-  // Botones verticales: uno por jugador con al menos 1 disponible
-  const jugadoresOrdenados = [...dispoPorJugador.keys()]
-    .filter(name => dispoPorJugador.get(name).length > 0)
+  const jugadoresOrdenados = [...dispoPorJugador.entries()]
+    .filter(([,has])=>has)
+    .map(([name])=>name)
     .sort((a,b)=>a.localeCompare(b,'es'));
 
   for(const name of jugadoresOrdenados){
-    const disponibles = dispoPorJugador.get(name) || [];
-    const count = disponibles.length;
-
-    // Preview: primeros 8 números convertidos a "00"
-    const preview = disponibles.slice(0, 8).map(emojiToLabel).join(', ');
-
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'player-btn';
-    btn.setAttribute('aria-label', `Jugador ${name}, ${count} números disponibles`);
-
-    // Nombre a la izquierda
-    const left = document.createElement('span');
-    left.className = 'player-name';
-    left.textContent = name;
-
-    // Badge a la derecha
-    const right = document.createElement('span');
-    right.className = 'player-numbers';
-
-    const countEl = document.createElement('span');
-    countEl.className = 'player-count';
-    countEl.textContent = `${count}`;
-
-    const prevEl = document.createElement('span');
-    prevEl.className = 'player-preview';
-    prevEl.textContent = preview;
-
-    right.appendChild(countEl);
-    right.appendChild(prevEl);
-
-    btn.appendChild(left);
-    btn.appendChild(right);
+    btn.textContent = name;
 
     btn.addEventListener('click', ()=>{
       playSoundOnce(SOUNDS.back);
