@@ -625,7 +625,7 @@
           // Abrir WhatsApp automáticamente
           const numerosMsg = body.numeros.map(emojiToLabel).join(', ');
           const jugador = body.jugador;
-          const msg = `*¡Listo porfe Gildardo!*, a tarvés del jugador *${jugador}* seleccioné mi(s) número(s): *${numerosMsg}*`;
+          const msg = `*¡Listo profe Gildardo!*\n\nA través del jugador *${jugador}* seleccioné mi(s) número(s): *${numerosMsg}*`;
           const url = `https://api.whatsapp.com/send?phone=${encodeURIComponent('573102442861')}&text=${encodeURIComponent(msg)}`;
           window.open(url, '_blank');
 
